@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  whatsapp-app:
+    build: .
+    dockerfile: Dockerfile
+    container_name: whatsapp-agent
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - SERVER_URL=https://whapp.xia.ar/
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+    volumes:
+      - ./sessions:/app/.wwebjs_auth   # ⬅ Persistencia segura del WhatsApp
+      - ./logs:/app/logs
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whatsapp.rule=Host(`whapp.xia.ar`)"
+      - "traefik.http.routers.whatsapp.entrypoints=websecure"
+      - "traefik.http.routers.whatsapp.tls.certresolver=myresolver"
+      - "traefik.http.services.whatsapp.loadbalancer.server.port=3000"
+    networks:
+      - traefik-public
+networks:
+  traefik-public:
+    external: true
