@@ -174,41 +174,42 @@ app.get("/start", checkAuth, (_req, res) => {
 // ======================================================================
 // DATA JSON
 // ======================================================================
+function checkApiKey(req, res, next) {
+  if (req.query.key === process.env.API_KEY) return next();
+  return res.status(401).json({ error: "API Key inválida" });
+}
 
-app.get("/data", checkAuth, async (_req, res) => {
-  try {
-    const chats = await client.getChats();
 
-    const filtered = chats.filter((c) => !c.isGroup);
+app.get("/data-n8n", checkApiKey, async (req, res) => {
+  const chats = await client.getChats();
 
-    const result = [];
+  const filtered = chats.filter(c => !c.isGroup);
 
-    for (const chat of filtered) {
-      const msgs = await chat.fetchMessages({ limit: 2000 });
+  const result = [];
 
-      const clean = msgs
-        .filter((m) => !m.hasMedia)
-        .filter((m) => !(m.body || "").includes("http"))
-        .map((m) => ({
-          id: m.id._serialized,
-          from: m.author || m.from,
-          body: m.body,
-          timestamp: m.timestamp,
-        }));
+  for (const chat of filtered) {
+    const msgs = await chat.fetchMessages({ limit: 2000 });
 
-      result.push({
-        id: chat.id._serialized,
-        name: chat.name || chat.id.user,
-        messages: clean,
-      });
-    }
+    const clean = msgs
+      .filter(m => !m.hasMedia)
+      .filter(m => !(m.body || "").includes("http"))
+      .map(m => ({
+        id: m.id._serialized,
+        from: m.author || m.from,
+        body: m.body,
+        timestamp: m.timestamp
+      }));
 
-    return res.json(result);
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: "Error procesando chats" });
+    result.push({
+      id: chat.id._serialized,
+      name: chat.name || chat.id.user,
+      messages: clean
+    });
   }
+
+  return res.json(result);
 });
+
 
 // ======================================================================
 // LOGOUT APP
@@ -223,26 +224,43 @@ app.get("/logout", checkAuth, (req, res) => {
 // DESVINCULAR WHATSAPP
 // ======================================================================
 
-app.get("/unlink", checkAuth, async (req, res) => {
+app.get("/unlink", async (req, res) => {
   try {
+    console.log("🔻 Desvinculando WhatsApp...");
+
     if (client) {
-      try { await client.logout(); } catch {}
-      try { await client.destroy(); } catch {}
+      try {
+        await client.logout();
+      } catch (e) {
+        console.log("Logout error (ignorado):", e.message);
+      }
+
+      try {
+        await client.destroy();
+      } catch (e) {
+        console.log("Destroy error (ignorado):", e.message);
+      }
+
+      client = null;
     }
 
-    client = null;
+    // 🔥 Esperar 1 segundo para que Puppeteer suelte el lock en Docker
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
-    await fs.remove(path.join(__dirname, ".wwebjs_auth"));
+    const authPath = path.join(__dirname, ".wwebjs_auth");
+
+    // 🔥 Forzar borrado seguro (sin EBUSY)
+    await fs.remove(authPath);
 
     qrValue = null;
     waReady = false;
 
-    res.send("WhatsApp desvinculado. <a href='/'>Volver</a>");
+    return res.send("WhatsApp desvinculado. <a href='/'>Volver</a>");
   } catch (err) {
-    console.error(err);
-    res.status(500).send("Error al desvincular");
+    console.error("unlink error:", err);
+    return res.status(500).send("Error al desvincular");
   }
-});
+})
 
 // ======================================================================
 // SERVER
