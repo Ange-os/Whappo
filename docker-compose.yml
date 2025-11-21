@@ -3,13 +3,14 @@ version: "3.9"
 services:
   whatsapp-app:
     build: .
-    dockerfile: Dockerfile
     container_name: whatsapp-agent
     restart: always
     ports:
       - "3000:3000"
     environment:
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+      - NODE_ENV=production
     volumes:
-      - ./sessions:/app/.wwebjs_auth   # ⬅ Persistencia segura del WhatsApp
+      - ./sessions:/app/.wwebjs_auth
       - ./logs:/app/logs
