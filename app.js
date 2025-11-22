@@ -228,39 +228,56 @@ app.get("/unlink", async (req, res) => {
   try {
     console.log("🔻 Desvinculando WhatsApp...");
 
+    // === 1️⃣ Si existe cliente, cerrarlo completamente ===
     if (client) {
       try {
-        // Cierra sesión sin destruir Chromium
         await client.logout();
       } catch (e) {
-        console.log("⚠ logout ignorable:", e.message);
+        console.log("⚠ logout falló (ignorable):", e.message);
       }
 
       try {
-        // Cierra puppeteer sin matar el contenedor
         if (client.pupBrowser) {
           await client.pupBrowser.close();
         }
       } catch (e) {
-        console.log("⚠ browser close ignorable:", e.message);
+        console.log("⚠ cerrar navegador falló (ignorable):", e.message);
       }
 
       try {
         await client.destroy();
       } catch (e) {
-        console.log("⚠ destroy ignorable:", e.message);
+        console.log("⚠ destroy falló (ignorable):", e.message);
+      }
+
+      client = null;
+    }
+
+    // === 2️⃣ LIMPIAR LA CARPETA DE SESIÓN SIN BORRARLA ===
+    const fs = require("fs-extra");
+    const path = require("path");
+
+    const authPath = path.join(__dirname, ".wwebjs_auth");
+
+    console.log("🧹 Limpiando contenido de sesión...");
+
+    if (await fs.pathExists(authPath)) {
+      const items = await fs.readdir(authPath);
+      for (const item of items) {
+        const full = path.join(authPath, item);
+        try {
+          await fs.remove(full);
+        } catch (e) {
+          console.log("⚠ No se pudo borrar", full, e.message);
+        }
       }
     }
 
-    // 🧽 Limpia las sesiones internas (LA CLAVE REAL)
-    const LocalAuth = require("whatsapp-web.js").LocalAuth;
-    await LocalAuth.resetState();  // <--- limpia sesiones sin tocar la carpeta
+    console.log("🧽 Sesión limpiada sin errores");
 
-    client = null;
+    // === 3️⃣ REINICIAR CLIENTE LIMPIO ===
     qrValue = null;
     waReady = false;
-
-    console.log("🔄 Reiniciando nuevo cliente limpio…");
 
     client = createClient();
     client.initialize();
@@ -269,9 +286,10 @@ app.get("/unlink", async (req, res) => {
 
   } catch (err) {
     console.error("unlink error:", err);
-    return res.status(500).send("Error al desvincular");
+    res.status(500).send("Error al desvincular");
   }
 });
+
 
 // ======================================================================
 // SERVER
