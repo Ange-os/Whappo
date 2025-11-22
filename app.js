@@ -290,6 +290,41 @@ app.get("/unlink", async (req, res) => {
   }
 });
 
+// ======================================================================
+// UNLINK PARA N8N (con API KEY)
+// ======================================================================
+app.get("/unlink-n8n", checkApiKey, async (req, res) => {
+  try {
+    console.log("🔻 Desvinculando WhatsApp...");
+
+    if (client) {
+      try { await client.logout(); } catch (e) { console.log("logout err", e); }
+      try { await client.destroy(); } catch (e) { console.log("destroy err", e); }
+    }
+
+    client = null;
+
+    // 🧼 Borrar la carpeta de sesiones correctamente (sin bloquear)
+    const sessPath = path.join(__dirname, ".wwebjs_auth");
+
+    try {
+      await fs.remove(sessPath);
+    } catch (err) {
+      console.log("unlink error:", err);
+    }
+
+    qrValue = null;
+    waReady = false;
+
+    return res.json({ ok: true, message: "WhatsApp desvinculado correctamente" });
+
+  } catch (err) {
+    console.log("unlink fatal", err);
+    return res.status(500).json({ ok: false, error: "Error al desvincular" });
+  }
+});
+
+
 
 // ======================================================================
 // SERVER
