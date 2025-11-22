@@ -230,37 +230,48 @@ app.get("/unlink", async (req, res) => {
 
     if (client) {
       try {
+        // Cierra sesión sin destruir Chromium
         await client.logout();
       } catch (e) {
-        console.log("Logout error (ignorado):", e.message);
+        console.log("⚠ logout ignorable:", e.message);
+      }
+
+      try {
+        // Cierra puppeteer sin matar el contenedor
+        if (client.pupBrowser) {
+          await client.pupBrowser.close();
+        }
+      } catch (e) {
+        console.log("⚠ browser close ignorable:", e.message);
       }
 
       try {
         await client.destroy();
       } catch (e) {
-        console.log("Destroy error (ignorado):", e.message);
+        console.log("⚠ destroy ignorable:", e.message);
       }
-
-      client = null;
     }
 
-    // 🔥 Esperar 1 segundo para que Puppeteer suelte el lock en Docker
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // 🧽 Limpia las sesiones internas (LA CLAVE REAL)
+    const LocalAuth = require("whatsapp-web.js").LocalAuth;
+    await LocalAuth.resetState();  // <--- limpia sesiones sin tocar la carpeta
 
-    const authPath = path.join(__dirname, ".wwebjs_auth");
-
-    // 🔥 Forzar borrado seguro (sin EBUSY)
-    await fs.remove(authPath);
-
+    client = null;
     qrValue = null;
     waReady = false;
 
-    return res.send("WhatsApp desvinculado. <a href='/'>Volver</a>");
+    console.log("🔄 Reiniciando nuevo cliente limpio…");
+
+    client = createClient();
+    client.initialize();
+
+    return res.send("WhatsApp desvinculado correctamente. <a href='/'>Volver</a>");
+
   } catch (err) {
     console.error("unlink error:", err);
     return res.status(500).send("Error al desvincular");
   }
-})
+});
 
 // ======================================================================
 // SERVER
