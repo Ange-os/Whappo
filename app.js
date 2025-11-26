@@ -188,7 +188,7 @@ app.get("/data-n8n", checkApiKey, async (req, res) => {
   const result = [];
 
   for (const chat of filtered) {
-    const msgs = await chat.fetchMessages({ limit: 2000 });
+    const msgs = await chat.fetchMessages({ limit: 6000 });
 
     const clean = msgs
       .filter(m => !m.hasMedia)
