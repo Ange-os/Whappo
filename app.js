@@ -131,7 +131,7 @@ app.get("/", checkAuth, async (_req, res) => {
                     btn.disabled = true;
                     btn.innerText = "Enviando...";
 
-                    fetch("https://n8n.xia.ar/webhook-test/6b90987a-8166-4e89-8e16-441db8db9ba8", {
+                    fetch("https://n8n.xia.ar/webhook/6b90987a-8166-4e89-8e16-441db8db9ba8", {
                     method: "POST"
                     })
                     .then(() => {
