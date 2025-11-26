@@ -20,8 +20,8 @@ app.use(cookieParser());
 // LOGIN SIMPLE CON COOKIES
 // ======================================================================
 
-const USER = process.env.USER || "admin";
-const PASS = process.env.PASS || "1234";
+const USER = process.env.USER
+const PASS = process.env.PASS;
 
 function checkAuth(req, res, next) {
   if (req.cookies.session === "ok") return next();
