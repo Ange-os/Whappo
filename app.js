@@ -180,7 +180,7 @@ function checkApiKey(req, res, next) {
 }
 
 
-app.get("/data-n8n", checkApiKey, async (req, res) => {
+app.get("/data-n8n-flat", checkApiKey, async (req, res) => {
   const chats = await client.getChats();
   const filtered = chats.filter(c => !c.isGroup);
   const flatMessages = [];
@@ -205,7 +205,6 @@ app.get("/data-n8n", checkApiKey, async (req, res) => {
   
   return res.json(flatMessages);
 });
-
 
 // ======================================================================
 // LOGOUT APP
