@@ -182,32 +182,28 @@ function checkApiKey(req, res, next) {
 
 app.get("/data-n8n", checkApiKey, async (req, res) => {
   const chats = await client.getChats();
-
   const filtered = chats.filter(c => !c.isGroup);
-
-  const result = [];
-
+  const flatMessages = [];
+  
   for (const chat of filtered) {
     const msgs = await chat.fetchMessages({ limit: 6000 });
-
     const clean = msgs
       .filter(m => !m.hasMedia)
       .filter(m => !(m.body || "").includes("http"))
+      .filter(m => m.body && m.body.trim().length > 0) // Evitar mensajes vacíos
       .map(m => ({
-        id: m.id._serialized,
-        from: m.author || m.from,
-        body: m.body,
+        text: m.body, // Campo principal para vectorizar
+        messageId: m.id._serialized,
+        chatId: chat.id._serialized,
+        chatName: chat.name || chat.id.user,
+        sender: m.author || m.from,
         timestamp: m.timestamp
       }));
-
-    result.push({
-      id: chat.id._serialized,
-      name: chat.name || chat.id.user,
-      messages: clean
-    });
+    
+    flatMessages.push(...clean);
   }
-
-  return res.json(result);
+  
+  return res.json(flatMessages);
 });
 
 
